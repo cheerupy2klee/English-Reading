@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>문장별 읽어주기</title>
+  <style>
+    :root{--navy:#142c4d;--blue:#2467d6;--sky:#edf4ff;--ink:#1c2634;--muted:#667085;--line:#d7dde5;--paper:#fff;--bg:#f5f7fa;--green:#15755b}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55}
+    header{background:var(--navy);color:white;padding:38px 20px 48px}.wrap{max-width:900px;margin:auto}h1{margin:0;font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.04em}header p{margin:8px 0 0;opacity:.86}
+    main{max-width:900px;margin:-22px auto 48px;padding:0 16px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:clamp(20px,4vw,32px);box-shadow:0 8px 24px rgba(20,44,77,.07);margin-bottom:18px}h2{font-size:1.3rem;margin:0 0 5px}.hint{color:var(--muted);margin:0 0 16px}
+    textarea{width:100%;min-height:190px;resize:vertical;border:1px solid #b9c3d0;border-radius:10px;padding:13px;font:inherit;line-height:1.65}textarea:focus{outline:3px solid #bdd3ff;border-color:var(--blue)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:10px;padding:11px 15px;background:#e8ecf1;color:var(--ink);font:inherit;font-weight:700;cursor:pointer}button:hover{filter:brightness(.97)}button:focus-visible{outline:3px solid #98bcff;outline-offset:2px}.primary{background:var(--blue);color:#fff}.listen{background:var(--blue);color:#fff}.slow{background:#dfeaff;color:#174986}.stop{background:#fff1ef;color:#a33628}.voiceLabel{font-weight:700;color:var(--muted)}select{font:inherit;border:1px solid #b9c3d0;border-radius:8px;padding:9px;background:white;max-width:100%}
+    #empty{color:var(--muted);text-align:center;padding:28px 8px}.sentence{display:grid;grid-template-columns:46px 1fr;gap:14px;padding:18px 0;border-bottom:1px solid var(--line)}.sentence:last-child{border-bottom:0}.num{width:35px;height:35px;display:grid;place-items:center;border-radius:50%;background:var(--sky);color:var(--navy);font-weight:800}.text{font-size:1.08rem;word-break:break-word;margin:3px 0 12px}.active .num{background:var(--green);color:white}.active .text{color:#0d5641}.badge{color:var(--muted);font-size:.9rem;font-weight:700}.hidden{display:none}.footer{color:var(--muted);font-size:.9rem;text-align:center}
+    @media(max-width:540px){header{padding-top:28px}.panel{padding:20px;border-radius:14px}.sentence{grid-template-columns:36px 1fr;gap:10px}.num{width:32px;height:32px}.row button{flex:1}.row select{width:100%}}
+  </style>
+</head>
+<body>
+  <header><div class="wrap"><h1>문장별 읽어주기</h1><p>내가 쓴 글을 문장마다 듣고, 천천히 따라 읽어 보세요.</p></div></header>
+  <main>
+    <section class="panel" aria-labelledby="input-title">
+      <h2 id="input-title">1. 글을 입력하세요</h2><p class="hint">영어 글을 붙여 넣고 “문장 만들기”를 누르면 문장별 연습 버튼이 생깁니다.</p>
+      <label class="hidden" for="textInput">영어 글</label><textarea id="textInput" placeholder="예: My name is Mina. I like to draw pictures. My favorite color is blue."></textarea>
+      <div class="row"><button class="primary" id="makeBtn">문장 만들기</button><button id="exampleBtn">예시 넣기</button><span id="count" class="badge"></span></div>
+    </section>
+    <section class="panel" aria-labelledby="practice-title">
+      <h2 id="practice-title">2. 문장 하나씩 연습하세요</h2><p class="hint">🔊 듣기는 보통 속도, 🐢 천천히 듣기는 느린 속도로 읽어 줍니다.</p>
+      <div class="row" style="margin:0 0 8px"><label class="voiceLabel" for="voiceSelect">읽어주는 목소리</label><select id="voiceSelect"><option>목소리 불러오는 중…</option></select><button class="stop" id="stopBtn">■ 멈추기</button></div>
+      <div id="empty">위에 영어 글을 입력하면 이곳에 문장이 나타납니다.</div><div id="sentences" aria-live="polite"></div>
+    </section>
+    <p class="footer">글은 이 브라우저 안에서만 사용됩니다. 인터넷 연결이나 가입이 필요하지 않습니다.</p>
+  </main>
+  <script>
+    const $=id=>document.getElementById(id); let parts=[],voices=[];
+    const esc=s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML};
+    function split(text){return (text.match(/[^.!?]+[.!?]+(?:[””'”']*)|[^.!?]+$/g)||[]).map(s=>s.trim()).filter(s=>/[A-Za-z]/.test(s));}
+    function loadVoices(){voices=speechSynthesis.getVoices().filter(v=>v.lang.toLowerCase().startsWith('en')); const select=$('voiceSelect');select.innerHTML=''; if(!voices.length){select.innerHTML='<option value="">기본 영어 목소리</option>';return} voices.sort((a,b)=>a.name.localeCompare(b.name)).forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${v.name} (${v.lang})`;select.appendChild(o)}); const preferred=voices.findIndex(v=>/en-US/i.test(v.lang));if(preferred>=0)select.value=preferred;}
+    speechSynthesis.onvoiceschanged=loadVoices; loadVoices();
+    function say(i,rate){speechSynthesis.cancel();document.querySelectorAll('.sentence').forEach(x=>x.classList.remove('active'));const row=$(`s-${i}`);if(row)row.classList.add('active');const u=new SpeechSynthesisUtterance(parts[i]);u.lang='en-US';u.rate=rate;const voice=voices[Number($('voiceSelect').value)];if(voice)u.voice=voice;u.onend=()=>row?.classList.remove('active');speechSynthesis.speak(u);}
+    function render(){const box=$('sentences');box.innerHTML='';$('empty').classList.toggle('hidden',parts.length>0);$('count').textContent=parts.length?`${parts.length}문장 준비됨`:'';parts.forEach((p,i)=>{const row=document.createElement('article');row.className='sentence';row.id=`s-${i}`;row.innerHTML=`<div class="num">${i+1}</div><div><div class="text">${esc(p)}</div><div class="row" style="margin:0"><button class="listen" type="button">🔊 듣기</button><button class="slow" type="button">🐢 천천히 듣기</button></div></div>`;const [normal,slow]=row.querySelectorAll('button');normal.onclick=()=>say(i,.9);slow.onclick=()=>say(i,.62);box.appendChild(row);});}
+    $('makeBtn').onclick=()=>{parts=split($('textInput').value);if(!parts.length){alert('영어 문장이 들어 있는 글을 입력해 주세요.');$('textInput').focus();return}render();$('practice-title').scrollIntoView({behavior:'smooth',block:'start'});};
+    $('exampleBtn').onclick=()=>{$('textInput').value='My name is Mina. I like to draw pictures. My favorite color is blue. I draw with my friends after school.';$('textInput').focus();};
+    $('stopBtn').onclick=()=>{speechSynthesis.cancel();document.querySelectorAll('.sentence').forEach(x=>x.classList.remove('active'));};
+  </script>
+</body>
+</html>

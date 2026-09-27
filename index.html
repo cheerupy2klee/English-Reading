@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Write · Revise · Speak</title>
+  <style>
+    :root { --ink:#1d2636; --muted:#667085; --paper:#fffdf9; --cream:#f7f2e9; --navy:#183153; --blue:#2d6cdf; --line:#ddd9d0; --green:#15755b; --warn:#9a5b11; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--cream); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.55; }
+    header { background:var(--navy); color:white; padding:42px 20px 50px; }
+    .wrap { max-width:960px; margin:auto; }
+    h1 { font-size:clamp(2rem,5vw,3.4rem); letter-spacing:-.04em; margin:0 0 8px; }
+    h2 { margin:0; font-size:1.3rem; letter-spacing:-.02em; }
+    header p { margin:0; opacity:.86; font-size:1.06rem; }
+    main { margin:-22px auto 48px; padding:0 16px; max-width:992px; }
+    .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+    .step { background:#ffffff; border:1px solid var(--line); border-radius:14px; padding:14px; font-weight:700; color:var(--muted); }
+    .step b { display:inline-grid; place-items:center; width:26px; height:26px; margin-right:8px; border-radius:50%; background:#e9edf5; color:var(--navy); }
+    .panel { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(18px,4vw,32px); margin:16px 0; box-shadow:0 8px 22px rgba(38,47,58,.06); }
+    .intro { color:var(--muted); margin:6px 0 18px; }
+    label { display:block; font-weight:700; margin:14px 0 7px; }
+    textarea, input { font:inherit; width:100%; border:1px solid #bfc5cc; border-radius:10px; padding:12px; background:#fff; color:var(--ink); }
+    textarea { min-height:180px; resize:vertical; }
+    textarea:focus, input:focus { outline:3px solid #b8d1ff; border-color:var(--blue); }
+    .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    button { border:0; border-radius:10px; padding:11px 16px; font:inherit; font-weight:700; cursor:pointer; background:#e8ebef; color:var(--ink); }
+    button.primary { background:var(--blue); color:white; }
+    button.green { background:var(--green); color:white; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .feedback { margin-top:18px; padding:16px; border-radius:12px; background:#f0f5ff; border-left:4px solid var(--blue); }
+    .feedback h3 { margin:0 0 8px; font-size:1rem; }
+    .feedback ul { margin:6px 0 0; padding-left:20px; }
+    .feedback .good { color:var(--green); }
+    .feedback .tip { color:var(--warn); }
+    .hidden { display:none; }
+    .practice { background:#eef7f2; border-color:#c6dfd3; }
+    .sentence { font-size:clamp(1.45rem,4vw,2.15rem); font-weight:750; letter-spacing:-.025em; margin:22px 0; min-height:3.4em; }
+    .counter { color:var(--muted); font-weight:700; }
+    .heard { margin-top:16px; padding:12px; min-height:48px; background:white; border-radius:10px; border:1px dashed #a9c7b9; }
+    details { margin-top:12px; color:var(--muted); }
+    summary { font-weight:700; cursor:pointer; color:var(--navy); }
+    .footnote { color:var(--muted); font-size:.9rem; margin:12px 0 0; }
+    @media (max-width:620px) { .steps { grid-template-columns:1fr; } header { padding-top:30px; } .panel { border-radius:14px; } }
+  </style>
+</head>
+<body>
+  <header><div class="wrap"><h1>Write · Revise · Speak</h1><p>영어로 쓰고, 스스로 다듬고, 한 문장씩 소리 내어 연습해요.</p></div></header>
+  <main>
+    <nav class="steps" aria-label="학습 단계"><div class="step"><b>1</b>영어 글쓰기</div><div class="step"><b>2</b>피드백 후 수정</div><div class="step"><b>3</b>듣고 따라 말하기</div></nav>
+
+    <section class="panel" aria-labelledby="write-title">
+      <h2 id="write-title">1. 먼저 영어로 써 보세요</h2><p class="intro">틀려도 괜찮아요. 주제와 글을 입력한 뒤 피드백 받기를 누르세요.</p>
+      <label for="topic">주제 (선택)</label><input id="topic" placeholder="예: My favorite food">
+      <label for="draft">내 영어 글</label><textarea id="draft" placeholder="I like pizza. It is delicious and ..."></textarea>
+      <div class="row" style="margin-top:14px"><button class="primary" id="feedbackBtn">피드백 받기</button><span id="wordCount" class="counter">0 words</span></div>
+      <div id="feedback" class="feedback hidden" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="revise-title">
+      <h2 id="revise-title">2. 피드백을 보고 스스로 고쳐 보세요</h2><p class="intro">아래 칸에 직접 최종 글을 작성하세요. 내 문장이 더 자연스러워졌는지 비교해 보세요.</p>
+      <label for="finalText">내 최종 영어 글</label><textarea id="finalText" placeholder="수정한 글을 여기에 써 보세요."></textarea>
+      <div class="row" style="margin-top:14px"><button class="green" id="startBtn">문장 연습 시작</button><button id="copyDraftBtn">처음 글 가져오기</button></div>
+    </section>
+
+    <section id="practice" class="panel practice hidden" aria-labelledby="practice-title">
+      <h2 id="practice-title">3. 듣고 따라 말해 보세요</h2><p class="intro">문장을 듣고, 잠시 멈춘 뒤 같은 문장을 말해 보세요. 다음 문장으로 넘어가며 반복할 수 있어요.</p>
+      <div id="sentenceCounter" class="counter">1 / 1</div><div id="sentence" class="sentence" aria-live="polite"></div>
+      <div class="row"><button class="primary" id="listenBtn">🔊 문장 듣기</button><button id="slowBtn">🐢 천천히 듣기</button><button id="prevBtn">← 이전</button><button id="nextBtn">다음 →</button></div>
+      <div class="row" style="margin-top:12px"><button id="recordBtn">🎙️ 내 말 확인하기</button><span id="recordStatus" class="counter"></span></div>
+      <div id="heard" class="heard" aria-live="polite">말한 내용이 여기에 나타납니다. (Chrome 또는 Edge에서 가장 잘 작동해요.)</div>
+      <details><summary>마이크 기능이 안 되나요?</summary>문장 듣기만으로도 연습할 수 있어요. 마이크 기능은 브라우저가 음성 인식을 지원하고 마이크 사용을 허용했을 때 작동합니다.</details>
+    </section>
+    <p class="footnote">개인정보 보호를 위해 글과 음성은 이 페이지 안에서만 사용되며, 서버로 전송하지 않습니다.</p>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    const draft = $('draft'), finalText = $('finalText'); let sentences = [], current = 0, recognition;
+    const count = () => $('wordCount').textContent = `${(draft.value.trim().match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []).length} words`;
+    draft.addEventListener('input', count); count();
+    function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+    $('feedbackBtn').onclick = () => {
+      const text = draft.value.trim(), box = $('feedback');
+      if (!text) { box.className='feedback'; box.innerHTML='<h3>먼저 영어 글을 써 주세요.</h3>'; return; }
+      const words = text.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || [], tips=[];
+      if (!/[.!?]$/.test(text)) tips.push('마지막 문장 끝에 마침표(.), 물음표(?) 또는 느낌표(!)를 넣어 보세요.');
+      if (words.length < 15) tips.push('문장을 한두 개 더 써서 이유나 예시를 덧붙여 보세요.');
+      if (/\bi\b/.test(text)) tips.push('대명사 I는 항상 대문자 I로 써야 해요.');
+      if (/\b(very|good|nice|bad)\b/i.test(text)) tips.push('very, good, nice, bad 대신 더 구체적인 단어를 떠올려 보세요.');
+      const starts = text.split(/[.!?]+/).map(x=>x.trim()).filter(Boolean);
+      if (starts.length > 1 && new Set(starts.map(s=>s.toLowerCase().split(/\s+/)[0])).size < starts.length) tips.push('여러 문장이 같은 단어로 시작한다면 표현을 조금 바꿔 보세요.');
+      if (!tips.length) tips.push('문장부호와 기본 문장 형태가 잘 갖춰져 있어요. 더 자연스러운 표현이 있는지 소리 내어 읽으며 확인해 보세요.');
+      box.className='feedback'; box.innerHTML=`<h3>스스로 확인할 점 <span class="good">✓</span></h3><ul>${tips.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="tip">이 피드백은 힌트예요. 뜻이 맞는지 생각하면서 내 문장으로 고쳐 보세요.</p>`;
+    };
+    $('copyDraftBtn').onclick = () => { finalText.value = draft.value; finalText.focus(); };
+    function splitSentences(text) { return (text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || []).map(s=>s.trim()).filter(Boolean); }
+    function renderSentence() { $('sentence').textContent = sentences[current]; $('sentenceCounter').textContent = `${current+1} / ${sentences.length}`; $('prevBtn').disabled=current===0; $('nextBtn').disabled=current===sentences.length-1; $('heard').textContent='말한 내용이 여기에 나타납니다.'; }
+    $('startBtn').onclick = () => { sentences=splitSentences(finalText.value.trim()); if (!sentences.length) { alert('먼저 최종 영어 글을 입력해 주세요.'); finalText.focus(); return; } current=0; $('practice').classList.remove('hidden'); renderSentence(); $('practice').scrollIntoView({behavior:'smooth',block:'start'}); };
+    function speak(rate) { if (!sentences.length) return; speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(sentences[current]); u.lang='en-US'; u.rate=rate; speechSynthesis.speak(u); }
+    $('listenBtn').onclick=()=>speak(.9); $('slowBtn').onclick=()=>speak(.65);
+    $('prevBtn').onclick=()=>{if(current){current--;renderSentence();}}; $('nextBtn').onclick=()=>{if(current<sentences.length-1){current++;renderSentence();}};
+    $('recordBtn').onclick=()=>{
+      const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!SpeechRecognition){ $('recordStatus').textContent='이 브라우저에서는 음성 인식이 지원되지 않아요.'; return; }
+      if(recognition){ recognition.stop(); return; }
+      recognition=new SpeechRecognition(); recognition.lang='en-US'; recognition.interimResults=true; recognition.continuous=false;
+      recognition.onstart=()=>{ $('recordBtn').textContent='■ 듣는 중… 누르면 끝내기'; $('recordStatus').textContent='영어로 말해 보세요.'; };
+      recognition.onresult=e=>{ $('heard').textContent=Array.from(e.results).map(r=>r[0].transcript).join(''); };
+      recognition.onerror=e=>{ $('recordStatus').textContent=`다시 시도해 주세요: ${e.error}`; };
+      recognition.onend=()=>{ $('recordBtn').textContent='🎙️ 내 말 확인하기'; recognition=null; };
+      recognition.start();
+    };
+  </script>
+</body>
+</html>
