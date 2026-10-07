@@ -3,75 +3,767 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Join Activity · 실시간 의견 모으기</title>
-  <link rel="stylesheet" href="style.css">
+  <title>실시간 의견 모으기</title>
+  <style>
+:root { --ink:#1d2636; --muted:#667085; --paper:#fffdf9; --cream:#f7f2e9; --navy:#183153; --blue:#2d6cdf; --line:#ddd9d0; --green:#15755b; --warn:#9a5b11; --red:#b42318; }
+* { box-sizing:border-box; }
+body { margin:0; color:var(--ink); background:var(--cream); font-family:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Malgun Gothic",sans-serif; line-height:1.55; }
+header { background:var(--navy); color:white; padding:30px 20px 44px; }
+.wrap { max-width:960px; margin:auto; }
+h1 { font-size:clamp(1.8rem,4.5vw,2.8rem); letter-spacing:-.04em; margin:0 0 6px; }
+h2 { margin:0 0 4px; font-size:1.25rem; letter-spacing:-.02em; }
+h3 { margin:0; font-size:1.05rem; }
+header p { margin:0; opacity:.86; }
+main { margin:-22px auto 48px; padding:0 16px; max-width:992px; }
+.panel { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:clamp(18px,4vw,30px); margin:16px 0; box-shadow:0 8px 22px rgba(38,47,58,.06); }
+.intro, .muted { color:var(--muted); }
+.intro { margin:4px 0 16px; }
+label { display:block; font-weight:700; margin:14px 0 6px; }
+textarea, input[type=text], input[type=email], input[type=password], input[type=number], select { font:inherit; width:100%; border:1px solid #bfc5cc; border-radius:10px; padding:11px 12px; background:#fff; color:var(--ink); }
+textarea { min-height:120px; resize:vertical; }
+textarea:focus, input:focus, select:focus { outline:3px solid #b8d1ff; border-color:var(--blue); }
+.row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+button, .btn { border:0; border-radius:10px; padding:10px 15px; font:inherit; font-weight:700; cursor:pointer; background:#e8ebef; color:var(--ink); text-decoration:none; display:inline-block; }
+button.primary, .btn.primary { background:var(--blue); color:white; }
+button.green { background:var(--green); color:white; }
+button.danger { background:#fbe9e7; color:var(--red); }
+button.small, .btn.small { padding:6px 11px; font-size:.9rem; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.hidden { display:none !important; }
+.error { color:var(--red); font-weight:700; min-height:1.5em; margin:10px 0 0; }
+.note { padding:12px 14px; border-radius:12px; background:#f0f5ff; border-left:4px solid var(--blue); margin:12px 0; }
+.note.warn { background:#fff6e5; border-color:#e0a030; }
+.badge { display:inline-block; padding:2px 9px; border-radius:99px; font-size:.82rem; font-weight:700; background:#e9edf5; color:var(--navy); }
+.badge.open { background:#e3f4ec; color:var(--green); }
+.badge.closed { background:#f1f1f1; color:var(--muted); }
+.check { display:flex; gap:8px; align-items:flex-start; font-weight:500; margin:8px 0; cursor:pointer; }
+.check input { width:18px; height:18px; margin-top:3px; flex:none; }
+fieldset { border:1px solid var(--line); border-radius:12px; padding:6px 14px 10px; margin:14px 0 0; }
+legend { font-weight:700; padding:0 6px; }
+
+/* 응답 유형 고르기 타일 */
+.tiles { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+.tile { margin:0; border:2px solid var(--line); border-radius:12px; padding:10px 12px; cursor:pointer; background:#fff; font-weight:700; }
+.tile small { display:block; font-weight:500; color:var(--muted); font-size:.82rem; }
+.tile input { position:absolute; opacity:0; pointer-events:none; }
+.tile:has(input:checked) { border-color:var(--blue); background:#f0f5ff; }
+.tile:has(input:focus-visible) { outline:3px solid #b8d1ff; }
+
+/* 학생 답 입력 */
+.choices { display:grid; gap:10px; }
+.choice { display:flex; align-items:center; gap:12px; margin:0; padding:14px 16px; border:2px solid var(--line); border-radius:14px; background:#fff; font-size:1.1rem; cursor:pointer; }
+.choice:has(input:checked) { border-color:var(--blue); background:#f0f5ff; }
+.choice input { width:20px; height:20px; flex:none; }
+.ox { grid-template-columns:1fr 1fr; }
+.ox .choice { justify-content:center; font-size:2.6rem; font-weight:800; padding:22px; }
+.ox .choice input { position:absolute; opacity:0; }
+.stars { display:flex; gap:6px; }
+.stars button { font-size:2.2rem; background:none; padding:4px; color:#c9ccd2; line-height:1; }
+.stars button.on { color:#e6a817; }
+.rank-list { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+.rank-list li { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.rank-list .num { font-weight:800; color:var(--blue); width:1.6em; }
+.rank-list .txt { flex:1; }
+
+/* 결과 시각화 */
+.empty { color:var(--muted); text-align:center; padding:30px 10px; }
+.bars { display:grid; gap:12px; }
+.bar-row { display:grid; grid-template-columns:minmax(90px,32%) 1fr auto; gap:12px; align-items:center; }
+.bar-label { font-weight:700; overflow-wrap:anywhere; }
+.bar-track { background:#eceae4; border-radius:8px; height:30px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:8px; transition:width .5s ease; min-width:2px; }
+.bar-value { font-variant-numeric:tabular-nums; font-weight:700; min-width:5.5em; text-align:right; }
+.bar-value small { color:var(--muted); font-weight:500; }
+.pie-wrap { display:flex; flex-wrap:wrap; gap:28px; align-items:center; justify-content:center; }
+.pie { width:min(300px,70vw); aspect-ratio:1; border-radius:50%; }
+.legend { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+.legend li { display:flex; gap:10px; align-items:center; font-weight:700; }
+.legend .sw { width:16px; height:16px; border-radius:4px; flex:none; }
+.rank-row { display:grid; grid-template-columns:2.4em minmax(90px,32%) 1fr auto; gap:12px; align-items:center; }
+.medal { font-size:1.5rem; text-align:center; font-weight:800; color:var(--muted); }
+.cloud { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:6px 18px; padding:20px 10px; min-height:220px; }
+.cloud span { font-weight:800; line-height:1.1; letter-spacing:-.02em; overflow-wrap:anywhere; }
+.cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; }
+.card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 3px 10px rgba(38,47,58,.05); }
+.card.is-hidden, li.is-hidden { opacity:.45; }
+.card .text { font-size:1.08rem; overflow-wrap:anywhere; white-space:pre-wrap; }
+.card .foot { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:auto; color:var(--muted); font-size:.9rem; }
+.vote { background:#f3f0ea; border-radius:99px; padding:5px 12px; font-size:.95rem; }
+.vote.on { background:#fde7ef; color:#b7417a; }
+.list { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+.list li { display:flex; gap:12px; align-items:baseline; padding:10px 12px; background:#fff; border:1px solid var(--line); border-radius:10px; }
+.list .ans { flex:1; overflow-wrap:anywhere; white-space:pre-wrap; }
+.list .who, .list time { color:var(--muted); font-size:.88rem; white-space:nowrap; }
+.view-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+.view-tabs button[aria-pressed=true] { background:var(--navy); color:#fff; }
+
+/* 교사 대시보드 */
+.acts { display:grid; gap:12px; }
+.act { border:1px solid var(--line); border-radius:14px; padding:16px 18px; background:#fff; }
+.act .q { font-size:1.08rem; margin:6px 0 10px; overflow-wrap:anywhere; }
+.act .pin { font-size:1.6rem; font-weight:800; letter-spacing:.12em; color:var(--navy); font-variant-numeric:tabular-nums; }
+.act .meta { color:var(--muted); font-size:.92rem; }
+
+/* 결과(프로젝터) 화면 */
+.screen-head { display:flex; flex-wrap:wrap; justify-content:space-between; gap:16px; align-items:center; }
+.join-box { background:rgba(255,255,255,.12); border-radius:14px; padding:10px 16px; }
+.join-box .pin { font-size:clamp(1.8rem,5vw,2.8rem); font-weight:800; letter-spacing:.14em; font-variant-numeric:tabular-nums; line-height:1.1; }
+.join-box small { opacity:.8; overflow-wrap:anywhere; }
+.question { font-size:clamp(1.4rem,3.6vw,2.4rem); font-weight:800; letter-spacing:-.03em; margin:0; overflow-wrap:anywhere; }
+.big-count { font-size:1.1rem; font-weight:700; color:var(--muted); }
+.toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:10px 18px; border-radius:10px; font-weight:700; z-index:10; }
+
+@media (max-width:620px) {
+  .grid2 { grid-template-columns:1fr; }
+  .bar-row { grid-template-columns:1fr auto; }
+  .bar-row .bar-track { grid-column:1 / -1; grid-row:2; }
+  .rank-row { grid-template-columns:2.2em 1fr auto; }
+  .rank-row .bar-track { grid-column:2 / -1; grid-row:2; }
+}
+  </style>
 </head>
 <body>
-  <header><div class="wrap"><h1>Join Activity</h1><p>선생님이 알려 준 PIN 6자리를 입력하고 참여하세요.</p></div></header>
-  <main>
-    <div id="demo"></div>
+  <div id="app"></div>
 
-    <!-- 1단계: PIN 입력 -->
-    <section id="joinPanel" class="panel" aria-labelledby="join-title">
-      <h2 id="join-title">활동 참여하기</h2>
-      <form id="joinForm" novalidate>
-        <label for="pin">활동 PIN</label>
-        <input id="pin" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="482731" style="font-size:1.6rem;letter-spacing:.2em;max-width:260px">
-        <div class="row" style="margin-top:14px"><button class="primary" type="submit">다음 →</button></div>
-        <p id="joinError" class="error" aria-live="polite"></p>
-      </form>
-    </section>
+  <!-- ═════════════ 학생 화면 ═════════════ -->
+  <template id="tpl-student">
+    <header><div class="wrap"><h1>Join Activity</h1><p>선생님이 알려 준 PIN 6자리를 입력하고 참여하세요.</p></div></header>
+    <main>
+      <div id="demo"></div>
+      <section id="joinPanel" class="panel" aria-labelledby="join-title">
+        <h2 id="join-title">활동 참여하기</h2>
+        <form id="joinForm" novalidate>
+          <label for="pin">활동 PIN</label>
+          <input id="pin" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="482731" style="font-size:1.6rem;letter-spacing:.2em;max-width:260px">
+          <div class="row" style="margin-top:14px"><button class="primary" type="submit">다음 →</button></div>
+          <p id="joinError" class="error" aria-live="polite"></p>
+        </form>
+      </section>
+      <section id="answerPanel" class="panel hidden" aria-labelledby="question">
+        <p class="muted" id="actTitle" style="margin:0"></p>
+        <h2 id="question" class="question" style="font-size:clamp(1.3rem,3.4vw,1.9rem)"></h2>
+        <div id="privacyNote" class="note"></div>
+        <form id="answerForm" novalidate>
+          <div class="grid2">
+            <div id="noField"><label for="studentNo">학번</label><input id="studentNo" type="text" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="10512"></div>
+            <div id="nameField"><label for="studentName">이름</label><input id="studentName" type="text" maxlength="30" autocomplete="off" placeholder="홍길동"></div>
+          </div>
+          <label id="answerLabel">내 답</label>
+          <div id="answerInput"></div>
+          <div class="row" style="margin-top:16px"><button class="primary" type="submit" id="submitBtn">제출하기</button><button type="button" id="leaveBtn">다른 PIN 입력</button></div>
+          <p id="answerError" class="error" aria-live="polite"></p>
+        </form>
+        <div id="closedMsg" class="note warn hidden">선생님이 응답 받기를 마감했어요.</div>
+      </section>
+      <section id="donePanel" class="panel hidden" aria-live="polite">
+        <h2>✅ 제출했어요!</h2>
+        <p class="intro" id="myAnswer"></p>
+        <div class="row"><button id="againBtn" class="primary"></button></div>
+      </section>
+      <section id="resultsPanel" class="panel hidden">
+        <h2>친구들의 응답</h2>
+        <p class="intro" id="resultsIntro"></p>
+        <div id="results"></div>
+      </section>
+      <p class="muted" style="text-align:right;font-size:.9rem"><a href="#teacher" style="color:inherit">선생님용 화면 →</a></p>
+    </main>
+  </template>
 
-    <!-- 2단계: 학생 정보 + 답하기 -->
-    <section id="answerPanel" class="panel hidden" aria-labelledby="question">
-      <p class="muted" id="actTitle" style="margin:0"></p>
-      <h2 id="question" class="question" style="font-size:clamp(1.3rem,3.4vw,1.9rem)"></h2>
-      <div id="privacyNote" class="note"></div>
-      <form id="answerForm" novalidate>
-        <div id="idFields" class="grid2">
-          <div id="noField"><label for="studentNo">학번</label><input id="studentNo" type="text" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="10512"></div>
-          <div id="nameField"><label for="studentName">이름</label><input id="studentName" type="text" maxlength="30" autocomplete="off" placeholder="홍길동"></div>
+  <!-- ═════════════ 교사 대시보드 ═════════════ -->
+  <template id="tpl-teacher">
+    <header><div class="wrap"><h1>My Classroom</h1><p>질문을 만들고, 학생들의 의견을 실시간으로 모아 보세요.</p></div></header>
+    <main>
+      <div id="demo"></div>
+      <section id="loginPanel" class="panel hidden" aria-labelledby="login-title">
+        <h2 id="login-title">교사 로그인</h2>
+        <form id="loginForm" novalidate style="max-width:420px">
+          <label for="email">이메일</label><input id="email" type="email" autocomplete="username">
+          <label for="password">비밀번호 (6자 이상)</label><input id="password" type="password" autocomplete="current-password">
+          <div class="row" style="margin-top:14px"><button class="primary" type="submit">로그인</button><button type="button" id="signupBtn">처음이에요 (가입)</button></div>
+          <p id="loginError" class="error" aria-live="polite"></p>
+        </form>
+      </section>
+      <div id="dash" class="hidden">
+        <div class="row" style="justify-content:space-between;margin-top:30px">
+          <button class="primary" id="newBtn" style="font-size:1.05rem">＋ 새 활동 만들기</button>
+          <span class="muted"><span id="who"></span> <button class="small" id="logoutBtn">로그아웃</button> <a class="btn small" href="#">학생 화면</a></span>
         </div>
-        <label id="answerLabel">내 답</label>
-        <div id="answerInput"></div>
-        <div class="row" style="margin-top:16px"><button class="primary" type="submit" id="submitBtn">제출하기</button><button type="button" id="leaveBtn">다른 PIN 입력</button></div>
-        <p id="answerError" class="error" aria-live="polite"></p>
-      </form>
-      <div id="closedMsg" class="note warn hidden">선생님이 응답 받기를 마감했어요.</div>
-    </section>
+        <section id="createPanel" class="panel hidden" aria-labelledby="create-title">
+          <h2 id="create-title">새 활동 만들기</h2>
+          <form id="createForm" novalidate>
+            <h3 style="margin-top:14px">Step 1. 질문</h3>
+            <div class="grid2">
+              <div><label for="className">반 (선택)</label><input id="className" type="text" maxlength="40" placeholder="예: 1학년 5반"></div>
+              <div><label for="title">활동 제목</label><input id="title" type="text" maxlength="100" placeholder="예: What makes a good leader?"></div>
+            </div>
+            <label for="questionInput">질문</label>
+            <textarea id="questionInput" maxlength="500" style="min-height:80px" placeholder="예: What is the most important quality of a good leader?"></textarea>
+            <h3 style="margin-top:22px">Step 2. 응답 유형</h3>
+            <p class="intro">어떤 방식으로 답변을 받을까요?</p>
+            <div class="tiles" id="typeTiles"></div>
+            <div id="optionsBox">
+              <label for="optionsInput">선택지 (한 줄에 하나씩, 2~10개)</label>
+              <textarea id="optionsInput" style="min-height:120px" placeholder="Leadership&#10;Communication&#10;Empathy&#10;Confidence"></textarea>
+            </div>
+            <h3 style="margin-top:22px">Step 3. 결과 보여 주기</h3>
+            <label for="viewSelect">결과 표시 방식 <span class="muted" style="font-weight:500">(결과 화면에서 언제든 바꿀 수 있어요)</span></label>
+            <select id="viewSelect" style="max-width:320px"></select>
+            <label class="check"><input type="checkbox" id="resultsVisible"> 학생 화면에서도 결과(친구들의 응답)를 보여 주기</label>
+            <label class="check" id="votingRow"><input type="checkbox" id="allowVoting"> 친구들의 의견에 ♡ 투표 허용 <span class="muted">(결과 공개 시)</span></label>
+            <label class="check"><input type="checkbox" id="allowMultiple"> 한 학생이 여러 번 응답 허용 <span class="muted">(끄면 다시 제출할 때 답이 수정돼요)</span></label>
+            <fieldset>
+              <legend>학생 정보 설정</legend>
+              <label class="check"><input type="radio" name="identity" value="teacher" checked> 이름은 <b>선생님만</b> 보기 (친구들에게는 익명)</label>
+              <label class="check"><input type="radio" name="identity" value="public"> 이름을 <b>친구들에게도</b> 공개</label>
+              <label class="check"><input type="radio" name="identity" value="anonymous"> <b>완전 익명</b> (학번·이름을 받지 않음)</label>
+              <div id="idChecks" class="row" style="gap:18px">
+                <label class="check"><input type="checkbox" id="collectNo" checked> 학번 받기</label>
+                <label class="check"><input type="checkbox" id="collectName" checked> 이름 받기</label>
+              </div>
+            </fieldset>
+            <div class="row" style="margin-top:20px"><button class="primary" type="submit">활동 만들고 PIN 받기</button><button type="button" id="cancelBtn">취소</button></div>
+            <p id="createError" class="error" aria-live="polite"></p>
+          </form>
+        </section>
+        <section class="panel" aria-labelledby="list-title">
+          <h2 id="list-title">내 활동</h2>
+          <p class="intro">학생은 <b id="joinUrl"></b> 에서 PIN을 입력해 참여해요.</p>
+          <div id="acts" class="acts"></div>
+        </section>
+      </div>
+    </main>
+  </template>
 
-    <!-- 3단계: 제출 완료 -->
-    <section id="donePanel" class="panel hidden" aria-live="polite">
-      <h2>✅ 제출했어요!</h2>
-      <p class="intro" id="myAnswer"></p>
-      <div class="row"><button id="againBtn" class="primary"></button></div>
-    </section>
+  <!-- ═════════════ 결과 화면 (프로젝터) ═════════════ -->
+  <template id="tpl-screen">
+    <header>
+      <div class="wrap screen-head">
+        <div style="flex:1;min-width:240px">
+          <p id="actTitle" style="margin:0 0 4px"></p>
+          <h1 id="question" class="question">실시간 결과</h1>
+        </div>
+        <div class="join-box" id="joinBox">
+          <small>참여: <span id="joinUrl"></span></small>
+          <div>PIN <span class="pin" id="pinText"></span></div>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div id="demo"></div>
+      <section id="pinPanel" class="panel hidden">
+        <form id="pinForm" class="row"><input id="pinInput" type="text" inputmode="numeric" maxlength="6" placeholder="PIN 6자리" style="max-width:220px"><button class="primary">결과 보기</button></form>
+        <p id="pinError" class="error"></p>
+      </section>
+      <section id="resultPanel" class="panel hidden" aria-live="polite">
+        <div class="row" style="justify-content:space-between;margin-bottom:18px">
+          <span class="big-count"><span id="status" class="badge"></span> 응답 <span id="count">0</span>개</span>
+          <div class="view-tabs" id="viewTabs" role="group" aria-label="결과 표시 방식"></div>
+        </div>
+        <div id="locked" class="note hidden">결과가 아직 공개되지 않았어요.</div>
+        <div id="results"></div>
+      </section>
+      <section id="ownerPanel" class="panel hidden" aria-label="선생님 도구">
+        <div class="row" style="gap:8px 22px">
+          <label class="check"><input type="checkbox" id="showNames"> 화면에 학생 이름 표시</label>
+          <label class="check"><input type="checkbox" id="moderate"> 응답 숨기기 버튼 보기</label>
+          <label class="check"><input type="checkbox" id="resultsVisible"> 학생 화면에 결과 공개</label>
+          <button id="statusBtn" class="small"></button>
+          <button id="fullBtn" class="small">전체 화면</button>
+          <a class="btn small" href="#teacher">← 대시보드로</a>
+        </div>
+        <p class="muted" style="margin:10px 0 0;font-size:.9rem">이 도구는 활동을 만든 선생님에게만 보여요. 숨긴 응답은 학생 화면과 그래프에서 빠져요.</p>
+      </section>
+    </main>
+  </template>
 
-    <!-- 친구들의 응답 (선생님이 공개한 경우) -->
-    <section id="resultsPanel" class="panel hidden">
-      <h2>친구들의 응답</h2>
-      <p class="intro" id="resultsIntro"></p>
-      <div id="results"></div>
-    </section>
-  </main>
-
-  <script src="config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="common.js"></script>
   <script>
-    const { api, $, esc, TYPES, TEXT_LIMIT, optionsOf, formatAnswer, renderResults, friendly, demoBanner, getStore, setStore } = LivePoll;
-    demoBanner($('demo'));
-    let act = null, pin = '', unsub = null, rankOrder = [], rating = 0, lastAnswer = null;
+// ─────────────────────────────────────────────────────────────
+// Supabase 연결 설정
+// · 비워 두면 '데모 모드' — 이 컴퓨터의 브라우저 안에서만 작동합니다.
+// · 두 값을 채우면 여러 크롬북에서 실시간으로 함께 사용할 수 있습니다.
+//   (Supabase → Project Settings → API 에서 복사. service_role 키는 절대 넣지 마세요.)
+// ─────────────────────────────────────────────────────────────
+window.LIVEPOLL_CONFIG = {
+  supabaseUrl: '',      // 예: 'https://abcdefgh.supabase.co'
+  supabaseAnonKey: '',  // 예: 'eyJhbGciOi...'
+};
+  </script>
+  <script>
+// 실시간 의견 모으기 — 세 화면(학생 · 교사 · 결과)이 함께 쓰는 코드
+'use strict';
+window.LivePoll = (() => {
+  const cfg = window.LIVEPOLL_CONFIG || {};
+  const DEMO = !(cfg.supabaseUrl && cfg.supabaseAnonKey);
 
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // 응답 유형과 각 유형에서 고를 수 있는 결과 화면
+  const TYPES = {
+    choice: { label: '객관식', hint: '하나만 고르기', options: true, views: ['bar', 'pie', 'ranking', 'list'] },
+    multi:  { label: '복수 선택', hint: '여러 개 고르기', options: true, views: ['bar', 'pie', 'ranking', 'list'] },
+    ox:     { label: 'O / X', hint: 'O 또는 X', views: ['bar', 'pie', 'list'] },
+    rating: { label: '별점', hint: '1~5점 주기', views: ['bar', 'list'] },
+    word:   { label: '단어 입력', hint: '한두 단어 → 워드클라우드', views: ['wordcloud', 'ranking', 'cards', 'list'] },
+    short:  { label: '짧은 답변', hint: '한 문장으로 답하기', views: ['cards', 'wordcloud', 'list'] },
+    card:   { label: '의견 카드', hint: '긴 의견 + 친구 의견에 투표', views: ['cards', 'list', 'wordcloud'] },
+    rank:   { label: '순위 정하기', hint: '선택지의 순서 정하기', options: true, views: ['ranking', 'bar', 'list'] },
+  };
+  const TEXT_TYPES = ['word', 'short', 'card'];
+  const TEXT_LIMIT = { word: 30, short: 150, card: 400 };
+  const VIEWS = { bar: '막대그래프', pie: '원형 그래프', ranking: '순위', wordcloud: '워드클라우드', cards: '의견 카드', list: '응답 목록' };
+  const COLORS = ['#2d6cdf', '#e07a2f', '#15755b', '#b7417a', '#7a5bd6', '#b08a12', '#1f8ea3', '#8a6a4f'];
+
+  const ERRORS = {
+    NOT_FOUND: 'PIN을 다시 확인해 주세요. 해당 활동이 없어요.',
+    CLOSED: '선생님이 응답 받기를 마감했어요.',
+    NEED_ID: '학번을 입력해 주세요.',
+    NEED_NAME: '이름을 입력해 주세요.',
+    EMPTY: '답을 입력하거나 골라 주세요.',
+    BAD_ANSWER: '답 형식이 올바르지 않아요.',
+    TOO_MANY: '이 활동에는 더 이상 보낼 수 없어요. (한 사람당 최대 20개)',
+    NO_VOTING: '이 활동은 투표가 꺼져 있어요.',
+  };
+  function friendly(err) {
+    const msg = (err && err.message) || String(err);
+    for (const code in ERRORS) if (msg.includes(code)) return new Error(ERRORS[code]);
+    if (/Invalid login/i.test(msg)) return new Error('이메일 또는 비밀번호가 맞지 않아요.');
+    if (/Email not confirmed/i.test(msg)) return new Error('가입 확인 메일의 링크를 먼저 눌러 주세요.');
+    if (/Failed to fetch|NetworkError/i.test(msg)) return new Error('인터넷 연결을 확인해 주세요.');
+    return new Error(msg);
+  }
+
+  function getStore(kind, key) { try { return window[kind].getItem(key); } catch { return null; } }
+  function setStore(kind, key, value) { try { window[kind].setItem(key, value); } catch { /* 저장 불가 환경 */ } }
+
+  // 기기(데모 모드에서는 탭)마다 하나씩 생기는 익명 키 — 중복 응답·중복 투표를 막는 데 사용
+  let memoryKey = null;
+  function clientKey() {
+    const kind = DEMO ? 'sessionStorage' : 'localStorage';
+    let k = getStore(kind, 'livepoll-client') || memoryKey;
+    if (!k) {
+      k = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+      setStore(kind, 'livepoll-client', k);
+    }
+    return (memoryKey = k);
+  }
+  function randomPin() {
+    const n = new Uint32Array(1); crypto.getRandomValues(n);
+    return String(100000 + (n[0] % 900000));
+  }
+
+  function optionsOf(a) {
+    if (a.response_type === 'ox') return ['O', 'X'];
+    if (a.response_type === 'rating') return ['★ 1', '★ 2', '★ 3', '★ 4', '★ 5'];
+    return Array.isArray(a.options) ? a.options : [];
+  }
+
+  // 학생 답을 검사하고 정리 (schema.sql 의 submit_response 와 같은 규칙)
+  function cleanAnswer(a, ans) {
+    const t = a.response_type, n = optionsOf(a).length;
+    const isIdx = v => Number.isInteger(v) && v >= 0 && v < n;
+    ans = ans || {};
+    if (t === 'choice' || t === 'ox') { if (!isIdx(ans.choice)) throw new Error('EMPTY'); return { choice: ans.choice }; }
+    if (t === 'rating') { if (!Number.isInteger(ans.value) || ans.value < 1 || ans.value > 5) throw new Error('EMPTY'); return { value: ans.value }; }
+    if (t === 'multi') {
+      const c = Array.isArray(ans.choices) ? ans.choices : [];
+      if (!c.length) throw new Error('EMPTY');
+      if (!c.every(isIdx) || new Set(c).size !== c.length) throw new Error('BAD_ANSWER');
+      return { choices: [...c].sort((x, y) => x - y) };
+    }
+    if (t === 'rank') {
+      const o = Array.isArray(ans.order) ? ans.order : [];
+      if (o.length !== n || !o.every(isIdx) || new Set(o).size !== n) throw new Error('BAD_ANSWER');
+      return { order: o };
+    }
+    const text = String(ans.text || '').replace(/\s+/g, ' ').trim().slice(0, TEXT_LIMIT[t] || 150);
+    if (!text) throw new Error('EMPTY');
+    return { text };
+  }
+
+  const PUBLIC_FIELDS = ['id', 'pin', 'class_name', 'title', 'question', 'response_type', 'options', 'result_view',
+    'collect_student_no', 'collect_name', 'identity_mode', 'results_visible', 'allow_voting', 'allow_multiple', 'status'];
+  const publicActivity = a => Object.fromEntries(PUBLIC_FIELDS.map(k => [k, a[k]]));
+  const clip = (s, n) => { const v = String(s ?? '').trim().slice(0, n); return v || null; };
+
+  // ───────────── 데모 모드: 이 브라우저 안에서만 (localStorage + BroadcastChannel) ─────────────
+  function localApi() {
+    const KEY = 'livepoll-demo-v1';
+    const bc = typeof BroadcastChannel === 'function' ? new BroadcastChannel('livepoll-demo') : null;
+    // 브라우저가 저장을 막는 곳(미리보기 창 등)에서는 이 화면의 메모리에만 보관
+    let memory = { activities: [], responses: [], votes: [] };
+    const load = () => {
+      try {
+        const d = JSON.parse(localStorage.getItem(KEY));
+        return d && d.activities ? d : { activities: [], responses: [], votes: [] };
+      } catch { return JSON.parse(JSON.stringify(memory)); }
+    };
+    const save = d => { memory = d; try { localStorage.setItem(KEY, JSON.stringify(d)); } catch { /* 메모리에만 보관 */ } };
+    const byPin = (d, pin) => d.activities.find(a => a.pin === pin);
+    const fail = code => { throw new Error(code); };
+    const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+    const api = {
+      demo: true,
+      async getTeacher() { return { id: 'demo', email: '데모 교사' }; },
+      async signIn() {}, async signUp() { return true; }, async signOut() {},
+      async createActivity(fields) {
+        const d = load(); let pin;
+        do pin = randomPin(); while (byPin(d, pin));
+        const a = { ...fields, id: uid(), teacher_id: 'demo', pin, status: 'open', created_at: new Date().toISOString() };
+        d.activities.unshift(a); save(d); return a;
+      },
+      async myActivities() {
+        const d = load();
+        return d.activities.map(a => ({ ...a, response_count: d.responses.filter(r => r.activity_id === a.id).length }));
+      },
+      async updateActivity(a, patch) {
+        const d = load(); const x = d.activities.find(y => y.id === a.id);
+        if (x) Object.assign(x, patch); save(d); api.notify(a.pin);
+      },
+      async deleteActivity(a) {
+        const d = load(); const ids = new Set(d.responses.filter(r => r.activity_id === a.id).map(r => r.id));
+        d.activities = d.activities.filter(x => x.id !== a.id);
+        d.responses = d.responses.filter(r => !ids.has(r.id));
+        d.votes = d.votes.filter(v => !ids.has(v.response_id));
+        save(d); api.notify(a.pin);
+      },
+      async joinActivity(pin) { const a = byPin(load(), pin); return a ? publicActivity(a) : null; },
+      async submitResponse(pin, f) {
+        const d = load(); const a = byPin(d, pin);
+        if (!a) fail('NOT_FOUND');
+        if (a.status !== 'open') fail('CLOSED');
+        const anon = a.identity_mode === 'anonymous';
+        const no = !anon && a.collect_student_no ? clip(f.student_no, 20) : null;
+        const name = !anon && a.collect_name ? clip(f.student_name, 30) : null;
+        if (!anon && a.collect_student_no && !no) fail('NEED_ID');
+        if (!anon && a.collect_name && !name) fail('NEED_NAME');
+        const answer = cleanAnswer(a, f.answer), key = clientKey();
+        const mine = d.responses.filter(r => r.activity_id === a.id && r.client_key === key);
+        if (!a.allow_multiple && mine.length) Object.assign(mine[0], { answer, student_no: no, student_name: name });
+        else {
+          if (mine.length >= 20) fail('TOO_MANY');
+          d.responses.push({ id: uid(), activity_id: a.id, client_key: key, student_no: no, student_name: name, answer, hidden: false, created_at: new Date().toISOString() });
+        }
+        save(d); api.notify(pin);
+      },
+      async getResults(pin, asStudent) {
+        const d = load(); const a = byPin(d, pin);
+        if (!a) return null;
+        const owner = !asStudent && a.teacher_id === 'demo';
+        const activity = { ...publicActivity(a), is_owner: owner };
+        if (!owner && !a.results_visible) return { activity, responses: null };
+        const key = clientKey();
+        const responses = d.responses
+          .filter(r => r.activity_id === a.id && (owner || !r.hidden))
+          .map(r => ({
+            id: r.id, answer: r.answer, created_at: r.created_at, hidden: owner ? r.hidden : false,
+            author: owner ? ([r.student_no, r.student_name].filter(Boolean).join(' ') || null)
+              : (a.identity_mode === 'public' ? r.student_name : null),
+            votes: d.votes.filter(v => v.response_id === r.id).length,
+            voted: d.votes.some(v => v.response_id === r.id && v.client_key === key),
+          }));
+        return { activity, responses };
+      },
+      async setHidden(pin, id, hidden) {
+        const d = load(); const r = d.responses.find(x => x.id === id);
+        if (r) r.hidden = hidden; save(d); api.notify(pin);
+      },
+      async vote(pin, id) {
+        const d = load(); const a = byPin(d, pin);
+        if (!a) fail('NOT_FOUND');
+        if (!a.allow_voting || !a.results_visible) fail('NO_VOTING');
+        if (a.status !== 'open') fail('CLOSED');
+        const r = d.responses.find(x => x.id === id && x.activity_id === a.id && !x.hidden);
+        if (!r) fail('NOT_FOUND');
+        const key = clientKey(), i = d.votes.findIndex(v => v.response_id === id && v.client_key === key);
+        if (i >= 0) d.votes.splice(i, 1); else d.votes.push({ response_id: id, client_key: key });
+        save(d); api.notify(pin);
+      },
+      subscribe(pin, cb) {
+        const onMsg = e => { if (e.data === pin) cb(); };
+        const onStorage = e => { if (e.key === KEY) cb(); };
+        bc?.addEventListener('message', onMsg);
+        addEventListener('storage', onStorage);
+        const t = setInterval(cb, 3000);
+        return () => { clearInterval(t); bc?.removeEventListener('message', onMsg); removeEventListener('storage', onStorage); };
+      },
+      notify(pin) { bc?.postMessage(pin); },
+    };
+    return api;
+  }
+
+  // ───────────── Supabase 모드: 여러 기기에서 실시간 ─────────────
+  function supabaseApi() {
+    if (!window.supabase) throw new Error('Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.');
+    const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    const channels = {};
+    const check = ({ data, error }) => { if (error) throw friendly(error); return data; };
+    const rpc = async (fn, args) => check(await sb.rpc(fn, args));
+    const channel = pin => channels[pin] || (channels[pin] = sb.channel('livepoll-' + pin));
+    const api = {
+      demo: false,
+      async getTeacher() {
+        const { data } = await sb.auth.getSession();
+        const u = data.session && data.session.user;
+        return u ? { id: u.id, email: u.email } : null;
+      },
+      async signIn(email, password) { check(await sb.auth.signInWithPassword({ email, password })); },
+      async signUp(email, password) { const data = check(await sb.auth.signUp({ email, password })); return !!data.session; },
+      async signOut() { await sb.auth.signOut(); },
+      async createActivity(fields) {
+        for (let i = 0; i < 8; i++) {
+          const { data, error } = await sb.from('activities').insert({ ...fields, pin: randomPin() }).select().single();
+          if (!error) return data;
+          if (error.code !== '23505') throw friendly(error); // 23505 = PIN 중복 → 다시 시도
+        }
+        throw new Error('PIN을 만들지 못했어요. 다시 시도해 주세요.');
+      },
+      async myActivities() {
+        const data = check(await sb.from('activities').select('*, responses(count)').order('created_at', { ascending: false }));
+        return data.map(a => ({ ...a, response_count: (a.responses && a.responses[0] && a.responses[0].count) || 0 }));
+      },
+      async updateActivity(a, patch) { check(await sb.from('activities').update(patch).eq('id', a.id)); api.notify(a.pin); },
+      async deleteActivity(a) { check(await sb.from('activities').delete().eq('id', a.id)); api.notify(a.pin); },
+      joinActivity: pin => rpc('join_activity', { p_pin: pin }),
+      async submitResponse(pin, f) {
+        await rpc('submit_response', { p_pin: pin, p_client_key: clientKey(), p_student_no: f.student_no || null, p_student_name: f.student_name || null, p_answer: f.answer });
+        api.notify(pin);
+      },
+      getResults: (pin, asStudent) => rpc('get_results', { p_pin: pin, p_client_key: clientKey(), p_as_student: !!asStudent }),
+      async setHidden(pin, id, hidden) { check(await sb.from('responses').update({ hidden }).eq('id', id)); api.notify(pin); },
+      async vote(pin, id) { await rpc('vote_response', { p_pin: pin, p_response_id: id, p_client_key: clientKey() }); api.notify(pin); },
+      subscribe(pin, cb) {
+        // 실시간 신호(Broadcast)로 바로 새로고침하고, 혹시 신호를 놓쳐도 4초마다 다시 확인
+        const ch = channel(pin).on('broadcast', { event: 'changed' }, () => cb()).subscribe();
+        const t = setInterval(cb, 4000);
+        return () => { clearInterval(t); sb.removeChannel(ch); delete channels[pin]; };
+      },
+      notify(pin) { channel(pin).send({ type: 'broadcast', event: 'changed', payload: {} }).catch(() => {}); },
+    };
+    return api;
+  }
+
+  // ───────────── 결과 계산 ─────────────
+  const STOP = new Set('a an the and or but so is am are was were be been to of in on at for with as by it its this that these those i you he she we they my your our their me him her us them do does did think not no yes can will would should could have has had there here what who when where why how very really just also too than then from about into if because like'.split(' '));
+  function wordItems(a, rs) {
+    const m = new Map();
+    const add = (key, label) => { const e = m.get(key) || { label, value: 0 }; e.value++; m.set(key, e); };
+    for (const r of rs) {
+      const text = String((r.answer && r.answer.text) || '').trim();
+      if (!text) continue;
+      if (a.response_type === 'word') add(text.toLowerCase().replace(/[.,!?;:"'’]+/g, '').trim() || text, text);
+      else for (const w of text.toLowerCase().match(/[a-z가-힣]+(?:['’][a-z]+)?/g) || []) if (w.length > 1 && !STOP.has(w)) add(w, w);
+    }
+    return [...m.values()].sort((x, y) => y.value - x.value);
+  }
+  function tally(a, rs) {
+    const opts = optionsOf(a), n = opts.length, counts = opts.map(() => 0);
+    for (const r of rs) {
+      const ans = r.answer || {};
+      if (a.response_type === 'multi') (ans.choices || []).forEach(i => { if (counts[i] != null) counts[i]++; });
+      else if (a.response_type === 'rating') { if (counts[ans.value - 1] != null) counts[ans.value - 1]++; }
+      else if (a.response_type === 'rank') (ans.order || []).forEach((i, pos) => { if (counts[i] != null) counts[i] += n - pos; });
+      else if (counts[ans.choice] != null) counts[ans.choice]++;
+    }
+    return opts.map((label, i) => ({ label, value: counts[i], color: COLORS[i % COLORS.length] }));
+  }
+  const isTally = a => !TEXT_TYPES.includes(a.response_type);
+  function itemsFor(a, rs) {
+    if (isTally(a)) return tally(a, rs);
+    return wordItems(a, rs).slice(0, 20).map((it, i) => ({ ...it, color: COLORS[i % COLORS.length] }));
+  }
+  // 퍼센트의 기준: 순위 점수·단어 빈도는 전체 합계, 나머지는 응답자 수
+  const denom = (a, rs, items) => (a.response_type === 'rank' || !isTally(a)) ? items.reduce((s, i) => s + i.value, 0) : rs.length;
+  const unit = a => a.response_type === 'rank' ? '점' : isTally(a) ? '명' : '번';
+
+  function formatAnswer(a, ans) {
+    const opts = optionsOf(a); ans = ans || {};
+    switch (a.response_type) {
+      case 'choice': case 'ox': return opts[ans.choice] ?? '';
+      case 'multi': return (ans.choices || []).map(i => opts[i]).join(', ');
+      case 'rating': return '★'.repeat(ans.value || 0) + '☆'.repeat(5 - (ans.value || 0));
+      case 'rank': return (ans.order || []).map((i, k) => `${k + 1}. ${opts[i]}`).join('   ');
+      default: return ans.text || '';
+    }
+  }
+
+  // ───────────── 결과 그리기 ─────────────
+  function barRows(a, rs, items, ranked) {
+    const max = Math.max(1, ...items.map(i => i.value)), total = denom(a, rs, items) || 1;
+    const medal = k => ['🥇', '🥈', '🥉'][k] || k + 1;
+    return items.map((it, k) => `
+      <div class="${ranked ? 'rank-row' : 'bar-row'}">
+        ${ranked ? `<div class="medal">${medal(k)}</div>` : ''}
+        <div class="bar-label">${esc(it.label)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(it.value / max) * 100}%;background:${it.color}"></div></div>
+        <div class="bar-value">${it.value}${unit(a)} <small>${Math.round((it.value / total) * 100)}%</small></div>
+      </div>`).join('');
+  }
+  const views = {
+    bar(a, rs) {
+      const items = itemsFor(a, rs);
+      let extra = '';
+      if (a.response_type === 'rating' && rs.length) {
+        const avg = rs.reduce((s, r) => s + ((r.answer && r.answer.value) || 0), 0) / rs.length;
+        extra = `<p class="big-count">평균 ★ ${avg.toFixed(1)}</p>`;
+      }
+      return extra + `<div class="bars">${barRows(a, rs, items, false)}</div>`;
+    },
+    ranking(a, rs) {
+      const items = itemsFor(a, rs).sort((x, y) => y.value - x.value).slice(0, 10);
+      return `<div class="bars">${barRows(a, rs, items, true)}</div>`;
+    },
+    pie(a, rs) {
+      const items = itemsFor(a, rs).filter(i => i.value > 0), total = items.reduce((s, i) => s + i.value, 0) || 1;
+      let at = 0;
+      const stops = items.map(i => { const from = at; at += (i.value / total) * 360; return `${i.color} ${from}deg ${at}deg`; });
+      return `<div class="pie-wrap">
+        <div class="pie" role="img" aria-label="원형 그래프" style="background:conic-gradient(${stops.join(',') || '#eceae4 0deg 360deg'})"></div>
+        <ul class="legend">${items.map(i => `<li><span class="sw" style="background:${i.color}"></span>${esc(i.label)} · ${Math.round((i.value / total) * 100)}% <span class="muted">(${i.value}${unit(a)})</span></li>`).join('')}</ul>
+      </div>`;
+    },
+    wordcloud(a, rs) {
+      const items = (isTally(a) ? tally(a, rs).filter(i => i.value) : wordItems(a, rs)).slice(0, 60);
+      if (!items.length) return '<p class="empty">표시할 단어가 없어요.</p>';
+      const max = items[0].value, out = [];
+      items.forEach((it, i) => (i % 2 ? out.push(it) : out.unshift(it))); // 큰 단어가 가운데로
+      return `<div class="cloud">${out.map(it => {
+        const size = 0.95 + 3.1 * Math.sqrt(it.value / max);
+        const color = COLORS[items.indexOf(it) % COLORS.length];
+        return `<span style="font-size:${size.toFixed(2)}rem;color:${color}" title="${it.value}번">${esc(it.label)}</span>`;
+      }).join('')}</div>`;
+    },
+    cards(a, rs, all, o) {
+      const list = (o.owner ? all : rs).slice();
+      list.sort(a.allow_voting ? (x, y) => y.votes - x.votes || x.created_at.localeCompare(y.created_at) : (x, y) => y.created_at.localeCompare(x.created_at));
+      return `<div class="cards">${list.map(r => `
+        <div class="card ${r.hidden ? 'is-hidden' : ''}">
+          <div class="text">${esc(formatAnswer(a, r.answer))}</div>
+          <div class="foot">
+            <span>${o.showNames && r.author ? esc(r.author) : ''}${r.hidden ? ' (숨김)' : ''}</span>
+            <span class="row">
+              ${o.owner ? `<button class="small" data-act="hide" data-id="${esc(r.id)}" data-hidden="${r.hidden ? 1 : 0}">${r.hidden ? '보이기' : '숨기기'}</button>` : ''}
+              ${a.allow_voting ? (o.onVote && !r.hidden
+                ? `<button class="vote ${r.voted ? 'on' : ''}" data-act="vote" data-id="${esc(r.id)}" aria-pressed="${!!r.voted}">${r.voted ? '♥' : '♡'} ${r.votes}</button>`
+                : `<span class="vote">♥ ${r.votes}</span>`) : ''}
+            </span>
+          </div>
+        </div>`).join('')}</div>`;
+    },
+    list(a, rs, all, o) {
+      const list = (o.owner ? all : rs).slice().sort((x, y) => y.created_at.localeCompare(x.created_at));
+      const time = s => new Date(s).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+      return `<ul class="list">${list.map(r => `
+        <li class="${r.hidden ? 'is-hidden' : ''}">
+          <span class="ans">${esc(formatAnswer(a, r.answer))}</span>
+          ${o.showNames && r.author ? `<span class="who">${esc(r.author)}</span>` : ''}
+          <time>${time(r.created_at)}</time>
+          ${o.owner ? `<button class="small" data-act="hide" data-id="${esc(r.id)}" data-hidden="${r.hidden ? 1 : 0}">${r.hidden ? '보이기' : '숨기기'}</button>` : ''}
+        </li>`).join('')}</ul>`;
+    },
+  };
+
+  // el 안에 결과를 그립니다. opts: { owner, showNames, onVote(id), onHide(id, hidden) }
+  function renderResults(el, a, all, view, opts = {}) {
+    const key = JSON.stringify([a, all, view, opts.showNames, !!opts.owner]);
+    if (el._lpKey === key) return; // 바뀐 것이 없으면 다시 그리지 않음(깜빡임 방지)
+    el._lpKey = key;
+    const rs = all.filter(r => !r.hidden);
+    if (!view || !TYPES[a.response_type].views.includes(view)) view = TYPES[a.response_type].views[0];
+    el.innerHTML = (opts.owner ? all : rs).length
+      ? views[view](a, rs, all, opts)
+      : '<p class="empty">아직 응답이 없어요. 답을 기다리는 중…</p>';
+    el.onclick = e => {
+      const b = e.target.closest('button[data-act]');
+      if (!b) return;
+      if (b.dataset.act === 'vote' && opts.onVote) opts.onVote(b.dataset.id);
+      if (b.dataset.act === 'hide' && opts.onHide) opts.onHide(b.dataset.id, b.dataset.hidden !== '1');
+    };
+  }
+
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'toast'; t.textContent = msg; t.setAttribute('role', 'status');
+    document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+  }
+  function demoBanner(el) {
+    if (DEMO && el) el.innerHTML = '<div class="note warn"><b>데모 모드</b> — 지금은 이 컴퓨터의 브라우저 안에서만 작동해요. 같은 브라우저에서 탭을 여러 개 열어 시험해 볼 수 있어요. 여러 크롬북에서 쓰려면 이 파일 맨 위의 <code>LIVEPOLL_CONFIG</code>에 Supabase 정보를 넣으세요. (사용방법.txt 참고)</div>';
+  }
+
+  // Supabase 라이브러리는 설정했을 때만 불러옵니다 (데모 모드는 인터넷 없이도 작동)
+  const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  const loadScript = src => new Promise(resolve => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = el.onerror = resolve;
+    document.head.appendChild(el);
+  });
+  const LP = { DEMO, api: null, $, esc, TYPES, TEXT_TYPES, TEXT_LIMIT, VIEWS, ERRORS, friendly, optionsOf, cleanAnswer, formatAnswer, renderResults, toast, demoBanner, getStore, setStore };
+  LP.ready = (async () => {
+    if (!DEMO && !window.supabase) await loadScript(SUPABASE_JS);
+    LP.api = DEMO ? localApi() : supabaseApi();
+  })();
+  return LP;
+})();
+  </script>
+  <script>
+'use strict';
+(() => {
+  const { $, esc, TYPES, TEXT_TYPES, TEXT_LIMIT, VIEWS, optionsOf, cleanAnswer, formatAnswer, renderResults, friendly, toast, demoBanner, getStore, setStore } = LivePoll;
+  const baseUrl = location.href.split('#')[0].split('?')[0];
+  const studentLink = pin => `${baseUrl}#pin=${pin}`;
+  const setHash = h => { try { history.replaceState(null, '', h || baseUrl); } catch { /* 미리보기 등에서는 주소를 바꿀 수 없음 */ } };
+
+  // ── 화면 전환: #teacher / #screen=PIN / #pin=PIN(학생) ──
+  let cleanups = [], current = '';
+  const onCleanup = f => cleanups.push(f);
+  function route() {
+    const h = location.hash.slice(1), q = new URLSearchParams(location.search);
+    if (h === 'teacher') return { page: 'teacher' };
+    if (h.startsWith('screen')) return { page: 'screen', pin: h.replace(/\D/g, '').slice(0, 6) };
+    return { page: 'student', pin: (h.startsWith('pin') ? h : (q.get('pin') || '')).replace(/\D/g, '').slice(0, 6) };
+  }
+  function render(r = route()) {
+    const key = r.page + ':' + (r.pin || '');
+    if (key === current) return;
+    current = key;
+    cleanups.forEach(f => f()); cleanups = [];
+    const app = $('app');
+    app.replaceChildren($('tpl-' + r.page).content.cloneNode(true));
+    demoBanner($('demo'));
+    window.scrollTo(0, 0);
+    pages[r.page](r);
+  }
+  // 같은 창 안에서 화면 바꾸기 (팝업이 막힌 곳에서도 작동)
+  function go(page, pin) {
+    const r = { page, pin };
+    try { location.hash = page === 'teacher' ? 'teacher' : page === 'screen' ? 'screen=' + pin : (pin ? 'pin=' + pin : ''); } catch { /* 무시 */ }
+    render(r);
+  }
+  addEventListener('hashchange', () => render());
+  // 링크(#teacher 등)를 눌러도 같은 방식으로 이동
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || a.target === '_blank') return;
+    e.preventDefault();
+    const h = a.getAttribute('href').slice(1);
+    if (h === 'teacher') go('teacher'); else if (h.startsWith('screen')) go('screen', h.replace(/\D/g, '')); else go('student');
+  });
+
+  const pages = {};
+
+  // ═════════════ 학생 화면 ═════════════
+  pages.student = ({ pin: pinParam }) => {
+    const api = LivePoll.api;
+    let act = null, pin = '', unsub = null, rankOrder = [], rating = 0;
+    onCleanup(() => unsub && unsub());
     const show = (...ids) => ['joinPanel', 'answerPanel', 'donePanel'].forEach(id => $(id).classList.toggle('hidden', !ids.includes(id)));
-    const pinParam = (new URLSearchParams(location.search).get('pin') || '').replace(/\D/g, '').slice(0, 6);
-    $('pin').value = pinParam;
+    $('pin').value = pinParam || '';
     $('studentNo').value = getStore('localStorage', 'livepoll-no') || '';
     $('studentName').value = getStore('localStorage', 'livepoll-name') || '';
     $('pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); });
 
-    $('joinForm').addEventListener('submit', async e => {
-      e.preventDefault();
+    async function join() {
       $('joinError').textContent = '';
       const value = $('pin').value.trim();
       if (!/^\d{6}$/.test(value)) { $('joinError').textContent = 'PIN 6자리 숫자를 입력해 주세요.'; return; }
@@ -80,10 +772,11 @@
         if (!found) throw new Error('NOT_FOUND');
         pin = value; act = found; openActivity();
       } catch (err) { $('joinError').textContent = friendly(err).message; }
-    });
+    }
+    $('joinForm').addEventListener('submit', e => { e.preventDefault(); join(); });
 
     function openActivity() {
-      history.replaceState(null, '', '?pin=' + pin);
+      current = 'student:' + pin; setHash('#pin=' + pin);
       $('actTitle').textContent = [act.class_name, act.title].filter(Boolean).join(' · ');
       $('question').textContent = act.question;
       const anon = act.identity_mode === 'anonymous';
@@ -124,7 +817,7 @@
       }
     }
     function paintStars() {
-      $('answerInput').querySelectorAll('button').forEach(b => { const on = +b.dataset.v <= rating; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(+b.dataset.v === rating)); });
+      $('answerInput').querySelectorAll('button').forEach(b => { b.classList.toggle('on', +b.dataset.v <= rating); b.setAttribute('aria-checked', String(+b.dataset.v === rating)); });
     }
     function paintRank() {
       const opts = optionsOf(act);
@@ -153,12 +846,11 @@
       if (!anon && act.collect_student_no && !student_no) { $('answerError').textContent = '학번을 입력해 주세요.'; return; }
       if (!anon && act.collect_name && !student_name) { $('answerError').textContent = '이름을 입력해 주세요.'; return; }
       let answer;
-      try { answer = LivePoll.cleanAnswer(act, readAnswer()); } catch (err) { $('answerError').textContent = friendly(err).message; return; }
+      try { answer = cleanAnswer(act, readAnswer()); } catch (err) { $('answerError').textContent = friendly(err).message; return; }
       $('submitBtn').disabled = true;
       try {
         await api.submitResponse(pin, { student_no, student_name, answer });
         if (!anon) { setStore('localStorage', 'livepoll-no', student_no); setStore('localStorage', 'livepoll-name', student_name); }
-        lastAnswer = answer;
         $('myAnswer').textContent = '내 답: ' + formatAnswer(act, answer);
         $('againBtn').textContent = act.allow_multiple ? '➕ 하나 더 보내기' : '✏️ 답 수정하기';
         show('donePanel');
@@ -166,15 +858,11 @@
       } catch (err) { $('answerError').textContent = friendly(err).message; }
       finally { $('submitBtn').disabled = false; }
     });
-
-    $('againBtn').addEventListener('click', () => {
-      if (act.allow_multiple) buildAnswerInput();
-      show('answerPanel'); updateState();
-    });
+    $('againBtn').addEventListener('click', () => { if (act.allow_multiple) buildAnswerInput(); show('answerPanel'); updateState(); });
     $('leaveBtn').addEventListener('click', () => {
-      unsub && unsub(); unsub = null; act = null; lastAnswer = null;
+      unsub && unsub(); unsub = null; act = null;
       $('resultsPanel').classList.add('hidden');
-      history.replaceState(null, '', location.pathname);
+      current = 'student:'; setHash('');
       show('joinPanel'); $('pin').focus();
     });
 
@@ -184,7 +872,6 @@
       $('closedMsg').classList.toggle('hidden', !closed);
       $('againBtn').classList.toggle('hidden', closed);
     }
-
     async function refresh() {
       if (!act) return;
       try {
@@ -200,12 +887,202 @@
         $('resultsIntro').textContent = `응답 ${res.responses.length}개` + (act.allow_voting ? ' · 마음에 드는 의견에 ♡를 눌러 투표하세요.' : '');
         renderResults($('results'), act, res.responses, act.result_view, {
           showNames: act.identity_mode === 'public',
-          onVote: act.status === 'open' ? async id => { try { await api.vote(pin, id); refresh(); } catch (err) { LivePoll.toast(friendly(err).message); } } : null,
+          onVote: act.status === 'open' ? async id => { try { await api.vote(pin, id); refresh(); } catch (err) { toast(friendly(err).message); } } : null,
         });
       } catch { /* 잠시 연결이 끊겨도 다음 새로고침에서 다시 시도 */ }
     }
 
-    if (pinParam.length === 6) $('joinForm').requestSubmit();
+    if (/^\d{6}$/.test(pinParam || '')) join();
+  };
+
+  // ═════════════ 교사 대시보드 ═════════════
+  pages.teacher = () => {
+    const api = LivePoll.api;
+    let acts = [], timer = null;
+    onCleanup(() => clearInterval(timer));
+    $('joinUrl').textContent = baseUrl;
+
+    async function start() {
+      const t = await api.getTeacher();
+      $('loginPanel').classList.toggle('hidden', !!t);
+      $('dash').classList.toggle('hidden', !t);
+      if (!t) return;
+      $('who').textContent = t.email;
+      $('logoutBtn').classList.toggle('hidden', api.demo);
+      loadActs();
+      clearInterval(timer); timer = setInterval(loadActs, 5000);
+    }
+    $('loginForm').addEventListener('submit', async e => {
+      e.preventDefault(); $('loginError').textContent = '';
+      try { await api.signIn($('email').value.trim(), $('password').value); start(); }
+      catch (err) { $('loginError').textContent = friendly(err).message; }
+    });
+    $('signupBtn').addEventListener('click', async () => {
+      $('loginError').textContent = '';
+      try {
+        const loggedIn = await api.signUp($('email').value.trim(), $('password').value);
+        if (loggedIn) start(); else $('loginError').textContent = '가입 확인 메일을 보냈어요. 메일의 링크를 누른 뒤 로그인하세요.';
+      } catch (err) { $('loginError').textContent = friendly(err).message; }
+    });
+    $('logoutBtn').addEventListener('click', async () => { await api.signOut(); clearInterval(timer); start(); });
+
+    $('typeTiles').innerHTML = Object.entries(TYPES).map(([k, t], i) =>
+      `<label class="tile"><input type="radio" name="rtype" value="${k}" ${i === 0 ? 'checked' : ''}>${esc(t.label)}<small>${esc(t.hint)}</small></label>`).join('');
+    const rtype = () => document.querySelector('input[name=rtype]:checked').value;
+    const identity = () => document.querySelector('input[name=identity]:checked').value;
+    function syncForm() {
+      const t = rtype();
+      $('optionsBox').classList.toggle('hidden', !TYPES[t].options);
+      $('viewSelect').innerHTML = TYPES[t].views.map(v => `<option value="${v}">${VIEWS[v]}</option>`).join('');
+      $('votingRow').classList.toggle('hidden', !TEXT_TYPES.includes(t));
+      $('idChecks').classList.toggle('hidden', identity() === 'anonymous');
+    }
+    document.querySelectorAll('input[name=rtype], input[name=identity]').forEach(i => i.addEventListener('change', syncForm));
+    syncForm();
+    $('newBtn').addEventListener('click', () => { $('createPanel').classList.remove('hidden'); $('questionInput').focus(); });
+    $('cancelBtn').addEventListener('click', () => $('createPanel').classList.add('hidden'));
+
+    $('createForm').addEventListener('submit', async e => {
+      e.preventDefault(); $('createError').textContent = '';
+      const t = rtype(), question = $('questionInput').value.trim();
+      const options = TYPES[t].options ? [...new Set($('optionsInput').value.split('\n').map(s => s.trim().slice(0, 80)).filter(Boolean))] : [];
+      if (!question) { $('createError').textContent = '질문을 입력해 주세요.'; return; }
+      if (TYPES[t].options && (options.length < 2 || options.length > 10)) { $('createError').textContent = '선택지를 2~10개 입력해 주세요. (한 줄에 하나씩)'; return; }
+      const id = identity();
+      try {
+        const a = await api.createActivity({
+          class_name: $('className').value.trim(), title: $('title').value.trim(), question,
+          response_type: t, options, result_view: $('viewSelect').value,
+          identity_mode: id, collect_student_no: id !== 'anonymous' && $('collectNo').checked, collect_name: id !== 'anonymous' && $('collectName').checked,
+          results_visible: $('resultsVisible').checked, allow_voting: TEXT_TYPES.includes(t) && $('allowVoting').checked,
+          allow_multiple: $('allowMultiple').checked,
+        });
+        $('createForm').reset(); syncForm();
+        $('createPanel').classList.add('hidden');
+        toast(`활동을 만들었어요! PIN ${a.pin}`);
+        loadActs();
+      } catch (err) { $('createError').textContent = friendly(err).message; }
+    });
+
+    async function loadActs() {
+      try { acts = await api.myActivities(); } catch (err) { $('acts').innerHTML = `<p class="error">${esc(friendly(err).message)}</p>`; return; }
+      if (!acts.length) { $('acts').innerHTML = '<p class="empty">아직 만든 활동이 없어요. ‘＋ 새 활동 만들기’를 눌러 시작하세요.</p>'; return; }
+      const idLabel = { teacher: '이름: 선생님만', public: '이름: 공개', anonymous: '익명' };
+      const html = acts.map(a => `
+        <article class="act">
+          <div class="row" style="justify-content:space-between">
+            <span><span class="badge ${a.status}">${a.status === 'open' ? '진행 중' : '마감'}</span> <b>${esc([a.class_name, a.title].filter(Boolean).join(' · ') || '제목 없음')}</b></span>
+            <span class="pin" title="PIN">${esc(a.pin)}</span>
+          </div>
+          <p class="q">${esc(a.question)}</p>
+          <p class="meta">${esc(TYPES[a.response_type].label)} · ${idLabel[a.identity_mode]} · 결과 ${a.results_visible ? '학생 공개' : '비공개'} · <b>응답 ${a.response_count}개</b></p>
+          <div class="row">
+            <button class="primary small" data-act="screen" data-id="${esc(a.id)}">결과 보기</button>
+            <a class="btn small" href="#screen=${esc(a.pin)}" target="_blank" rel="noopener" title="프로젝터용으로 새 창에서 열기">새 창 ↗</a>
+            <button class="small" data-act="copy" data-id="${esc(a.id)}">학생 링크 복사</button>
+            <button class="small" data-act="toggle" data-id="${esc(a.id)}">${a.status === 'open' ? '응답 마감' : '다시 열기'}</button>
+            <button class="small danger" data-act="delete" data-id="${esc(a.id)}">삭제</button>
+          </div>
+        </article>`).join('');
+      if ($('acts')._html !== html) $('acts').innerHTML = $('acts')._html = html;
+    }
+    $('acts').addEventListener('click', async e => {
+      const b = e.target.closest('button[data-act]'); if (!b) return;
+      const a = acts.find(x => x.id === b.dataset.id); if (!a) return;
+      try {
+        if (b.dataset.act === 'screen') go('screen', a.pin);
+        else if (b.dataset.act === 'copy') {
+          const link = studentLink(a.pin);
+          try { await navigator.clipboard.writeText(link); toast('복사했어요: ' + link); } catch { prompt('이 링크를 복사하세요', link); }
+        } else if (b.dataset.act === 'toggle') {
+          await api.updateActivity(a, { status: a.status === 'open' ? 'closed' : 'open' }); loadActs();
+        } else if (b.dataset.act === 'delete') {
+          if (!confirm(`“${a.question}” 활동과 모든 응답을 삭제할까요? 되돌릴 수 없어요.`)) return;
+          await api.deleteActivity(a); loadActs();
+        }
+      } catch (err) { toast(friendly(err).message); }
+    });
+
+    start();
+  };
+
+  // ═════════════ 결과 화면 (프로젝터) ═════════════
+  pages.screen = ({ pin }) => {
+    const api = LivePoll.api;
+    let act = null, data = null, view = null, serverView = null, namesInit = false;
+    $('joinUrl').textContent = baseUrl.replace(/^https?:\/\//, '');
+    $('pinForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const v = $('pinInput').value.trim();
+      if (!/^\d{6}$/.test(v)) { $('pinError').textContent = 'PIN 6자리를 입력해 주세요.'; return; }
+      go('screen', v);
+    });
+
+    async function refresh() {
+      try {
+        data = await api.getResults(pin, false);
+        if (!data) { $('pinPanel').classList.remove('hidden'); $('resultPanel').classList.add('hidden'); $('pinError').textContent = friendly(new Error('NOT_FOUND')).message; return; }
+        act = data.activity;
+        if (serverView !== act.result_view) { serverView = act.result_view; view = act.result_view; }
+        if (act.is_owner && !namesInit) { namesInit = true; $('showNames').checked = act.identity_mode === 'public'; }
+        draw();
+      } catch (err) { console.warn(friendly(err).message); }
+    }
+    function draw() {
+      $('resultPanel').classList.remove('hidden');
+      document.title = act.question + ' · 실시간 결과';
+      $('actTitle').textContent = [act.class_name, act.title].filter(Boolean).join(' · ');
+      $('question').textContent = act.question;
+      $('pinText').textContent = act.pin;
+      $('status').textContent = act.status === 'open' ? '진행 중' : '마감';
+      $('status').className = 'badge ' + act.status;
+      const owner = act.is_owner;
+      $('ownerPanel').classList.toggle('hidden', !owner);
+      $('resultsVisible').checked = act.results_visible;
+      $('statusBtn').textContent = act.status === 'open' ? '응답 마감하기' : '응답 다시 받기';
+      $('viewTabs').innerHTML = TYPES[act.response_type].views.map(v =>
+        `<button class="small" data-view="${v}" aria-pressed="${v === view}">${VIEWS[v]}</button>`).join('');
+      $('locked').classList.toggle('hidden', !!data.responses);
+      if (!data.responses) { $('results').innerHTML = ''; $('results')._lpKey = null; $('count').textContent = '–'; return; }
+      $('count').textContent = data.responses.filter(r => !r.hidden).length;
+      renderResults($('results'), act, data.responses, view, {
+        owner: owner && $('moderate').checked,
+        showNames: act.identity_mode === 'public' || (owner && $('showNames').checked),
+        onHide: async (id, hidden) => { try { await api.setHidden(pin, id, hidden); refresh(); } catch (err) { toast(friendly(err).message); } },
+      });
+    }
+    $('viewTabs').addEventListener('click', async e => {
+      const b = e.target.closest('button[data-view]'); if (!b || !act) return;
+      view = b.dataset.view; draw();
+      if (act.is_owner) { // 선생님이 바꾸면 학생 화면도 같은 방식으로 표시
+        serverView = view;
+        try { await api.updateActivity(act, { result_view: view }); } catch (err) { toast(friendly(err).message); }
+      }
+    });
+    $('showNames').addEventListener('change', () => act && draw());
+    $('moderate').addEventListener('change', () => act && draw());
+    $('resultsVisible').addEventListener('change', async e => {
+      try { await api.updateActivity(act, { results_visible: e.target.checked }); refresh(); } catch (err) { toast(friendly(err).message); }
+    });
+    $('statusBtn').addEventListener('click', async () => {
+      try { await api.updateActivity(act, { status: act.status === 'open' ? 'closed' : 'open' }); refresh(); } catch (err) { toast(friendly(err).message); }
+    });
+    $('fullBtn').addEventListener('click', () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.());
+
+    if (/^\d{6}$/.test(pin || '')) {
+      const unsub = api.subscribe(pin, refresh);
+      onCleanup(unsub);
+      refresh();
+    } else {
+      $('pinPanel').classList.remove('hidden');
+      $('joinBox').classList.add('hidden');
+    }
+  };
+
+  LivePoll.ready.then(() => render(), err => {
+    $('app').innerHTML = `<main><div class="panel error" style="margin-top:40px">${esc(err.message)}</div></main>`;
+  });
+})();
   </script>
 </body>
 </html>

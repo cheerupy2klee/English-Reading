@@ -1,35 +1,36 @@
 실시간 의견 모으기 (Live Poll) 사용 방법
 
 ■ 파일 구성 (live-poll 폴더)
-  index.html    학생 참여 화면 — PIN 6자리 → 학번·이름 → 답하기
-  teacher.html  교사 대시보드 — 활동 만들기, PIN 받기, 마감/삭제
-  screen.html   결과 화면 (프로젝터용) — 막대그래프 · 원형 그래프 · 순위 · 워드클라우드 · 의견 카드 · 응답 목록
-  config.js     Supabase 연결 정보 (비워 두면 데모 모드)
-  schema.sql    Supabase 데이터베이스 설정 (한 번만 실행)
-  common.js, style.css  공통 코드와 디자인
+  index.html    앱 전체가 이 파일 하나에 들어 있습니다. (학생 화면 · 교사 대시보드 · 결과 화면)
+  schema.sql    Supabase 데이터베이스 설정 (여러 크롬북에서 쓸 때만, 한 번 실행)
+
+  index.html 안의 화면 바꾸기
+    학생 참여 화면   index.html            (PIN 6자리 → 학번·이름 → 답하기)
+    교사 대시보드     index.html#teacher    (학생 화면 맨 아래 '선생님용 화면 →'을 눌러도 됩니다)
+    결과 화면         대시보드에서 '결과 보기' (프로젝터용은 '새 창 ↗')
 
 ────────────────────────────────────────
 1. 먼저 데모 모드로 시험해 보기 (설치 없음)
 ────────────────────────────────────────
-  1) teacher.html 을 Chrome에서 엽니다. (config.js 가 비어 있으면 자동으로 데모 모드)
+  1) index.html 을 Chrome에서 엽니다. 맨 아래 '선생님용 화면 →'을 누릅니다.
   2) '＋ 새 활동 만들기' → 질문, 응답 유형, 결과 표시 방식, 학생 정보 설정을 고르고 'PIN 받기'.
-  3) 같은 브라우저에서 새 탭으로 index.html 을 열고 PIN을 넣어 학생처럼 답해 봅니다.
+  3) 같은 브라우저에서 새 탭으로 index.html 을 하나 더 열고 PIN을 넣어 학생처럼 답해 봅니다.
      (탭마다 다른 학생으로 취급됩니다.)
-  4) 대시보드의 '결과 보기'를 누르면 결과 화면이 열리고, 답이 들어올 때마다 바로 바뀝니다.
+  4) 대시보드의 '결과 보기'를 누르면 결과 화면으로 바뀌고, 답이 들어올 때마다 바로 바뀝니다.
 
   ※ 데모 모드는 이 컴퓨터의 브라우저 안에서만 작동합니다. 학생 크롬북과 연결하려면 2번을 하세요.
-  ※ 파일을 더블클릭해서 열었을 때 탭끼리 연결이 안 되면, 아래 3번처럼 인터넷 주소로 열어 주세요.
 
 ────────────────────────────────────────
 2. 여러 크롬북에서 실시간으로 쓰기 (Supabase 무료 플랜, 약 10분)
 ────────────────────────────────────────
   1) https://supabase.com 가입 → New project 만들기 (지역: Northeast Asia (Seoul) 추천).
   2) 왼쪽 메뉴 SQL Editor → New query → schema.sql 내용을 전부 붙여 넣고 Run.
-  3) Project Settings → API 에서
-       Project URL      → config.js 의 supabaseUrl
-       anon public key  → config.js 의 supabaseAnonKey   에 붙여 넣고 저장합니다.
+  3) Project Settings → API 에서 두 값을 복사해, index.html 안의 LIVEPOLL_CONFIG 에 붙여 넣습니다.
+     (메모장 등으로 index.html 을 열고 'LIVEPOLL_CONFIG' 를 검색하면 바로 나옵니다.)
+       Project URL      → supabaseUrl
+       anon public key  → supabaseAnonKey
      (service_role 키는 절대 넣지 마세요. anon 키는 공개되어도 괜찮도록 설계되어 있습니다.)
-  4) teacher.html 에서 이메일/비밀번호로 '처음이에요 (가입)' → 확인 메일의 링크 클릭 → 로그인.
+  4) 교사 대시보드에서 이메일/비밀번호로 '처음이에요 (가입)' → 확인 메일의 링크 클릭 → 로그인.
      (확인 메일을 생략하려면 Supabase → Authentication → Sign In / Providers → Email 에서
       'Confirm email' 을 끄면 됩니다.)
 
@@ -39,7 +40,7 @@
   1) GitHub 저장소 → Settings → Pages → Branch 를 main / (root) 로 저장.
   2) 잠시 후 주소가 생깁니다. 예: https://<아이디>.github.io/English-Reading/live-poll/
        학생:  .../live-poll/            (PIN 입력)
-       교사:  .../live-poll/teacher.html
+       교사:  .../live-poll/#teacher
   3) 대시보드의 '학생 링크 복사'를 누르면 PIN이 들어간 링크가 복사됩니다. (Google Classroom에 붙여 넣기)
 
 ────────────────────────────────────────
@@ -66,6 +67,5 @@
   · PIN은 누구나 입력할 수 있으므로, 활동이 끝나면 '응답 마감'을 눌러 주세요.
 
 ■ 다음 단계로 계획된 기능 (아직 없음)
-  · 비슷한 의견 자동 묶기, AI 피드백 (Gemini API — 키가 노출되지 않도록 서버 함수로 연결해야 함)
   · 영어 문장 작성/수정, 친구 문장 평가, 반 전체 공동 문장 만들기
   · 반(Class) 관리, QR 코드로 참여
