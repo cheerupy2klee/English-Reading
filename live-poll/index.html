@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Join Activity · 실시간 의견 모으기</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><div class="wrap"><h1>Join Activity</h1><p>선생님이 알려 준 PIN 6자리를 입력하고 참여하세요.</p></div></header>
+  <main>
+    <div id="demo"></div>
+
+    <!-- 1단계: PIN 입력 -->
+    <section id="joinPanel" class="panel" aria-labelledby="join-title">
+      <h2 id="join-title">활동 참여하기</h2>
+      <form id="joinForm" novalidate>
+        <label for="pin">활동 PIN</label>
+        <input id="pin" type="text" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="482731" style="font-size:1.6rem;letter-spacing:.2em;max-width:260px">
+        <div class="row" style="margin-top:14px"><button class="primary" type="submit">다음 →</button></div>
+        <p id="joinError" class="error" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- 2단계: 학생 정보 + 답하기 -->
+    <section id="answerPanel" class="panel hidden" aria-labelledby="question">
+      <p class="muted" id="actTitle" style="margin:0"></p>
+      <h2 id="question" class="question" style="font-size:clamp(1.3rem,3.4vw,1.9rem)"></h2>
+      <div id="privacyNote" class="note"></div>
+      <form id="answerForm" novalidate>
+        <div id="idFields" class="grid2">
+          <div id="noField"><label for="studentNo">학번</label><input id="studentNo" type="text" inputmode="numeric" maxlength="20" autocomplete="off" placeholder="10512"></div>
+          <div id="nameField"><label for="studentName">이름</label><input id="studentName" type="text" maxlength="30" autocomplete="off" placeholder="홍길동"></div>
+        </div>
+        <label id="answerLabel">내 답</label>
+        <div id="answerInput"></div>
+        <div class="row" style="margin-top:16px"><button class="primary" type="submit" id="submitBtn">제출하기</button><button type="button" id="leaveBtn">다른 PIN 입력</button></div>
+        <p id="answerError" class="error" aria-live="polite"></p>
+      </form>
+      <div id="closedMsg" class="note warn hidden">선생님이 응답 받기를 마감했어요.</div>
+    </section>
+
+    <!-- 3단계: 제출 완료 -->
+    <section id="donePanel" class="panel hidden" aria-live="polite">
+      <h2>✅ 제출했어요!</h2>
+      <p class="intro" id="myAnswer"></p>
+      <div class="row"><button id="againBtn" class="primary"></button></div>
+    </section>
+
+    <!-- 친구들의 응답 (선생님이 공개한 경우) -->
+    <section id="resultsPanel" class="panel hidden">
+      <h2>친구들의 응답</h2>
+      <p class="intro" id="resultsIntro"></p>
+      <div id="results"></div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="common.js"></script>
+  <script>
+    const { api, $, esc, TYPES, TEXT_LIMIT, optionsOf, formatAnswer, renderResults, friendly, demoBanner, getStore, setStore } = LivePoll;
+    demoBanner($('demo'));
+    let act = null, pin = '', unsub = null, rankOrder = [], rating = 0, lastAnswer = null;
+
+    const show = (...ids) => ['joinPanel', 'answerPanel', 'donePanel'].forEach(id => $(id).classList.toggle('hidden', !ids.includes(id)));
+    const pinParam = (new URLSearchParams(location.search).get('pin') || '').replace(/\D/g, '').slice(0, 6);
+    $('pin').value = pinParam;
+    $('studentNo').value = getStore('localStorage', 'livepoll-no') || '';
+    $('studentName').value = getStore('localStorage', 'livepoll-name') || '';
+    $('pin').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); });
+
+    $('joinForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      $('joinError').textContent = '';
+      const value = $('pin').value.trim();
+      if (!/^\d{6}$/.test(value)) { $('joinError').textContent = 'PIN 6자리 숫자를 입력해 주세요.'; return; }
+      try {
+        const found = await api.joinActivity(value);
+        if (!found) throw new Error('NOT_FOUND');
+        pin = value; act = found; openActivity();
+      } catch (err) { $('joinError').textContent = friendly(err).message; }
+    });
+
+    function openActivity() {
+      history.replaceState(null, '', '?pin=' + pin);
+      $('actTitle').textContent = [act.class_name, act.title].filter(Boolean).join(' · ');
+      $('question').textContent = act.question;
+      const anon = act.identity_mode === 'anonymous';
+      $('noField').classList.toggle('hidden', anon || !act.collect_student_no);
+      $('nameField').classList.toggle('hidden', anon || !act.collect_name);
+      $('privacyNote').textContent = anon ? '🔒 이 활동은 익명이에요. 이름을 적지 않아요.'
+        : act.identity_mode === 'public' ? '👀 이 활동은 내 이름이 친구들에게도 보여요.'
+        : '🔒 내 이름은 선생님만 볼 수 있어요. 친구들에게는 익명으로 보여요.';
+      buildAnswerInput();
+      show('answerPanel');
+      updateState();
+      unsub && unsub();
+      unsub = api.subscribe(pin, refresh);
+      refresh();
+    }
+
+    function buildAnswerInput() {
+      const t = act.response_type, opts = optionsOf(act), box = $('answerInput');
+      $('answerLabel').textContent = { multi: '내 답 (여러 개 고를 수 있어요)', rank: '내 순위 (화살표로 순서를 바꾸세요)', rating: '내 점수' }[t] || '내 답';
+      if (t === 'choice' || t === 'ox' || t === 'multi') {
+        const type = t === 'multi' ? 'checkbox' : 'radio';
+        box.innerHTML = `<div class="choices ${t === 'ox' ? 'ox' : ''}">${opts.map((o, i) =>
+          `<label class="choice"><input type="${type}" name="ans" value="${i}"> <span>${esc(o)}</span></label>`).join('')}</div>`;
+      } else if (t === 'rating') {
+        rating = 0;
+        box.innerHTML = `<div class="stars" role="radiogroup" aria-label="별점">${[1, 2, 3, 4, 5].map(v =>
+          `<button type="button" data-v="${v}" role="radio" aria-checked="false" aria-label="${v}점">★</button>`).join('')}</div>`;
+        box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { rating = +b.dataset.v; paintStars(); }));
+      } else if (t === 'rank') {
+        rankOrder = opts.map((_, i) => i); paintRank();
+      } else {
+        const max = TEXT_LIMIT[t];
+        box.innerHTML = t === 'card'
+          ? `<textarea id="textAns" maxlength="${max}" placeholder="내 생각을 영어 또는 한국어로 써 보세요."></textarea>`
+          : `<input id="textAns" type="text" maxlength="${max}" placeholder="${t === 'word' ? '예: kindness' : '한 문장으로 답해 보세요.'}">`;
+        box.insertAdjacentHTML('beforeend', `<p class="muted" style="margin:6px 0 0;font-size:.9rem"><span id="charCount">0</span> / ${max}자</p>`);
+        $('textAns').addEventListener('input', e => { $('charCount').textContent = e.target.value.length; });
+      }
+    }
+    function paintStars() {
+      $('answerInput').querySelectorAll('button').forEach(b => { const on = +b.dataset.v <= rating; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(+b.dataset.v === rating)); });
+    }
+    function paintRank() {
+      const opts = optionsOf(act);
+      $('answerInput').innerHTML = `<ol class="rank-list">${rankOrder.map((i, k) => `<li><span class="num">${k + 1}</span><span class="txt">${esc(opts[i])}</span>
+        <button type="button" class="small" data-k="${k}" data-d="-1" ${k === 0 ? 'disabled' : ''} aria-label="위로">↑</button>
+        <button type="button" class="small" data-k="${k}" data-d="1" ${k === rankOrder.length - 1 ? 'disabled' : ''} aria-label="아래로">↓</button></li>`).join('')}</ol>`;
+      $('answerInput').querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        const k = +b.dataset.k, j = k + +b.dataset.d;
+        [rankOrder[k], rankOrder[j]] = [rankOrder[j], rankOrder[k]]; paintRank();
+      }));
+    }
+    function readAnswer() {
+      const t = act.response_type, checked = [...$('answerInput').querySelectorAll('input[name=ans]:checked')].map(i => +i.value);
+      if (t === 'choice' || t === 'ox') return { choice: checked[0] };
+      if (t === 'multi') return { choices: checked };
+      if (t === 'rating') return { value: rating || undefined };
+      if (t === 'rank') return { order: rankOrder.slice() };
+      return { text: $('textAns').value };
+    }
+
+    $('answerForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      $('answerError').textContent = '';
+      const student_no = $('studentNo').value.trim(), student_name = $('studentName').value.trim();
+      const anon = act.identity_mode === 'anonymous';
+      if (!anon && act.collect_student_no && !student_no) { $('answerError').textContent = '학번을 입력해 주세요.'; return; }
+      if (!anon && act.collect_name && !student_name) { $('answerError').textContent = '이름을 입력해 주세요.'; return; }
+      let answer;
+      try { answer = LivePoll.cleanAnswer(act, readAnswer()); } catch (err) { $('answerError').textContent = friendly(err).message; return; }
+      $('submitBtn').disabled = true;
+      try {
+        await api.submitResponse(pin, { student_no, student_name, answer });
+        if (!anon) { setStore('localStorage', 'livepoll-no', student_no); setStore('localStorage', 'livepoll-name', student_name); }
+        lastAnswer = answer;
+        $('myAnswer').textContent = '내 답: ' + formatAnswer(act, answer);
+        $('againBtn').textContent = act.allow_multiple ? '➕ 하나 더 보내기' : '✏️ 답 수정하기';
+        show('donePanel');
+        refresh();
+      } catch (err) { $('answerError').textContent = friendly(err).message; }
+      finally { $('submitBtn').disabled = false; }
+    });
+
+    $('againBtn').addEventListener('click', () => {
+      if (act.allow_multiple) buildAnswerInput();
+      show('answerPanel'); updateState();
+    });
+    $('leaveBtn').addEventListener('click', () => {
+      unsub && unsub(); unsub = null; act = null; lastAnswer = null;
+      $('resultsPanel').classList.add('hidden');
+      history.replaceState(null, '', location.pathname);
+      show('joinPanel'); $('pin').focus();
+    });
+
+    function updateState() {
+      const closed = act.status !== 'open';
+      $('answerForm').classList.toggle('hidden', closed);
+      $('closedMsg').classList.toggle('hidden', !closed);
+      $('againBtn').classList.toggle('hidden', closed);
+    }
+
+    async function refresh() {
+      if (!act) return;
+      try {
+        const res = await api.getResults(pin, true);
+        if (!res || !act) return;
+        const changedType = res.activity.response_type !== act.response_type || JSON.stringify(res.activity.options) !== JSON.stringify(act.options);
+        act = res.activity;
+        if (changedType) buildAnswerInput();
+        updateState();
+        const visible = act.results_visible && res.responses;
+        $('resultsPanel').classList.toggle('hidden', !visible);
+        if (!visible) return;
+        $('resultsIntro').textContent = `응답 ${res.responses.length}개` + (act.allow_voting ? ' · 마음에 드는 의견에 ♡를 눌러 투표하세요.' : '');
+        renderResults($('results'), act, res.responses, act.result_view, {
+          showNames: act.identity_mode === 'public',
+          onVote: act.status === 'open' ? async id => { try { await api.vote(pin, id); refresh(); } catch (err) { LivePoll.toast(friendly(err).message); } } : null,
+        });
+      } catch { /* 잠시 연결이 끊겨도 다음 새로고침에서 다시 시도 */ }
+    }
+
+    if (pinParam.length === 6) $('joinForm').requestSubmit();
+  </script>
+</body>
+</html>
